@@ -1,0 +1,5 @@
+.idea/*
+.DS_Store
+vagrant/.vagrant/*
+*bin
+*_OUTPUT
