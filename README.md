@@ -25,10 +25,12 @@ libvirt_domain_block_stats_read_bytes_total{domain="...",uuid="...",source_file=
 libvirt_domain_block_stats_read_requests_total{domain="...",uuid="...",source_file="...",target_device="..."}
 libvirt_domain_block_stats_write_bytes_total{domain="...",uuid="...",source_file="...",target_device="..."}
 libvirt_domain_block_stats_write_requests_total{domain="...",uuid="...",source_file="...",target_device="..."}
+
 libvirt_domain_info_cpu_time_seconds_total{domain="...",uuid="..."}
 libvirt_domain_info_maximum_memory_bytes{domain="...",uuid="..."}
 libvirt_domain_info_memory_usage_bytes{domain="...",uuid="..."}
 libvirt_domain_info_virtual_cpus{domain="...",uuid="..."}
+
 libvirt_domain_interface_stats_receive_bytes_total{domain="...",uuid="...",source_bridge="...",target_device="..."}
 libvirt_domain_interface_stats_receive_drops_total{domain="...",uuid="...",source_bridge="...",target_device="..."}
 libvirt_domain_interface_stats_receive_errors_total{domain="...",uuid="...",source_bridge="...",target_device="..."}
@@ -37,6 +39,14 @@ libvirt_domain_interface_stats_transmit_bytes_total{domain="...",uuid="...",sour
 libvirt_domain_interface_stats_transmit_drops_total{domain="...",uuid="...",source_bridge="...",target_device="..."}
 libvirt_domain_interface_stats_transmit_errors_total{domain="...",uuid="...",source_bridge="...",target_device="..."}
 libvirt_domain_interface_stats_transmit_packets_total{domain="...",uuid="...",source_bridge="...",target_device="..."}
+
+libvirt_domain_memory_stats_actual_memory{domain="",uuid=""}
+libvirt_domain_memory_stats_available_memory{domain="",uuid=""}
+libvirt_domain_memory_stats_unused_memory{domain="",uuid=""}
+libvirt_domain_memory_stats_usable_memory{domain="",uuid=""}
+libvirt_domain_memory_stats_rss_memory{domain="",uuid=""}
+libvirt_domain_memory_stats_swap_in_memory{domain="",uuid=""}
+libvirt_domain_memory_stats_swap_out_memory{domain="",uuid=""}
 libvirt_up
 ```
 
