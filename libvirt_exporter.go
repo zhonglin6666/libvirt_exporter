@@ -19,11 +19,12 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/kumina/libvirt_exporter/libvirt_schema"
 	"github.com/libvirt/libvirt-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"libvirt_exporter/libvirt_schema"
 )
 
 // LibvirtExporter implements a Prometheus exporter for libvirt state.
@@ -57,6 +58,14 @@ type LibvirtExporter struct {
 	libvirtDomainInterfaceTxPacketsDesc *prometheus.Desc
 	libvirtDomainInterfaceTxErrsDesc    *prometheus.Desc
 	libvirtDomainInterfaceTxDropDesc    *prometheus.Desc
+
+	libvirtDomainMemActualDesc    *prometheus.Desc
+	libvirtDomainMemAvailableDesc *prometheus.Desc
+	libvirtDomainMemUsableDesc    *prometheus.Desc
+	libvirtDomainMemUnusedDesc    *prometheus.Desc
+	libvirtDomainMemRssDesc       *prometheus.Desc
+	libvirtDomainMemSwapInDesc    *prometheus.Desc
+	libvirtDomainMemSwapOutDesc   *prometheus.Desc
 }
 
 // NewLibvirtExporter creates a new Prometheus exporter for libvirt.
@@ -187,6 +196,41 @@ func NewLibvirtExporter(uri string, exportNovaMetadata bool) (*LibvirtExporter, 
 			"Number of packet transmit drops on a network interface.",
 			append(domainLabels, "source_bridge", "target_device"),
 			nil),
+		libvirtDomainMemActualDesc: prometheus.NewDesc(
+			prometheus.BuildFQName("libvirt", "domain_memory_stats", "stat_actual_memory"),
+			"Current balloon value.",
+			domainLabels,
+			nil),
+		libvirtDomainMemAvailableDesc: prometheus.NewDesc(
+			prometheus.BuildFQName("libvirt", "domain_memory_stats", "stat_available_memory"),
+			"The total amount of usable memory as seen by the domain.",
+			domainLabels,
+			nil),
+		libvirtDomainMemUnusedDesc: prometheus.NewDesc(
+			prometheus.BuildFQName("libvirt", "domain_memory_stats", "stat_unused_memory"),
+			"The amount of memrory left unused by the system.",
+			domainLabels,
+			nil),
+		libvirtDomainMemUsableDesc: prometheus.NewDesc(
+			prometheus.BuildFQName("libvirt", "domain_memory_stats", "stat_usable_memory"),
+			"The amount of memory which can be reclaimed by balloon without causing host swapping.",
+			domainLabels,
+			nil),
+		libvirtDomainMemSwapInDesc: prometheus.NewDesc(
+			prometheus.BuildFQName("libvirt", "domain_memory_stats", "stat_swap_in_memory"),
+			"The amount of data read from swap space.",
+			domainLabels,
+			nil),
+		libvirtDomainMemSwapOutDesc: prometheus.NewDesc(
+			prometheus.BuildFQName("libvirt", "domain_memory_stats", "stat_swap_out_memory"),
+			"The amount of memory written out to swap space.",
+			domainLabels,
+			nil),
+		libvirtDomainMemRssDesc: prometheus.NewDesc(
+			prometheus.BuildFQName("libvirt", "domain_memory_stats", "stat_rss_memory"),
+			"Resident Set Size of the running domain's process.",
+			domainLabels,
+			nil),
 	}, nil
 }
 
@@ -209,6 +253,14 @@ func (e *LibvirtExporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.libvirtDomainBlockWrTotalTimesDesc
 	ch <- e.libvirtDomainBlockFlushReqDesc
 	ch <- e.libvirtDomainBlockFlushTotalTimesDesc
+
+	ch <-e.libvirtDomainMemActualDesc
+	ch <-e.libvirtDomainMemAvailableDesc
+	ch <-e.libvirtDomainMemUnusedDesc
+	ch <-e.libvirtDomainMemUsableDesc
+	ch <-e.libvirtDomainMemRssDesc
+	ch <-e.libvirtDomainMemSwapInDesc
+	ch <-e.libvirtDomainMemSwapOutDesc
 }
 
 // Collect scrapes Prometheus metrics from libvirt.
@@ -327,6 +379,57 @@ func (e *LibvirtExporter) CollectDomain(ch chan<- prometheus.Metric, domain *lib
 		prometheus.CounterValue,
 		float64(info.CpuTime)/1e9,
 		domainLabelValues...)
+
+	memStats, err := domain.MemoryStats(uint32(libvirt.DOMAIN_MEMORY_STAT_NR), 0)
+	if err != nil {
+		return err
+	}
+	for _, ms := range memStats{
+		switch ms.Tag {
+		case int32(libvirt.DOMAIN_MEMORY_STAT_ACTUAL_BALLOON):
+			ch <- prometheus.MustNewConstMetric(
+				e.libvirtDomainMemActualDesc,
+				prometheus.CounterValue,
+				float64(ms.Val),
+				domainLabelValues...)
+		case int32(libvirt.DOMAIN_MEMORY_STAT_AVAILABLE):
+			ch <- prometheus.MustNewConstMetric(
+				e.libvirtDomainMemAvailableDesc,
+				prometheus.CounterValue,
+				float64(ms.Val),
+				domainLabelValues...)
+		case int32(libvirt.DOMAIN_MEMORY_STAT_UNUSED):
+			ch <- prometheus.MustNewConstMetric(
+				e.libvirtDomainMemUnusedDesc,
+				prometheus.CounterValue,
+				float64(ms.Val),
+				domainLabelValues...)
+		case int32(libvirt.DOMAIN_MEMORY_STAT_USABLE):
+			ch <- prometheus.MustNewConstMetric(
+				e.libvirtDomainMemUsableDesc,
+				prometheus.CounterValue,
+				float64(ms.Val),
+				domainLabelValues...)
+		case int32(libvirt.DOMAIN_MEMORY_STAT_RSS):
+			ch <- prometheus.MustNewConstMetric(
+				e.libvirtDomainMemRssDesc,
+				prometheus.CounterValue,
+				float64(ms.Val),
+				domainLabelValues...)
+		case int32(libvirt.DOMAIN_MEMORY_STAT_SWAP_IN):
+			ch <- prometheus.MustNewConstMetric(
+				e.libvirtDomainMemSwapInDesc,
+				prometheus.CounterValue,
+				float64(ms.Val),
+				domainLabelValues...)
+		case int32(libvirt.DOMAIN_MEMORY_STAT_SWAP_OUT):
+			ch <- prometheus.MustNewConstMetric(
+				e.libvirtDomainMemSwapOutDesc,
+				prometheus.CounterValue,
+				float64(ms.Val),
+				domainLabelValues...)
+		}
+	}
 
 	// Report block device statistics.
 	for _, disk := range desc.Devices.Disks {
